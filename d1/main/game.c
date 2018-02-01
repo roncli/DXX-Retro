@@ -497,7 +497,10 @@ void do_cloak_stuff(void)
 					digi_play_sample( SOUND_CLOAK_OFF, F1_0);
 #ifdef NETWORK
 					if (Game_mode & GM_MULTI)
+					{
 						multi_send_play_sound(SOUND_CLOAK_OFF, F1_0);
+						multi_send_ship_status();
+					}
 					maybe_drop_net_powerup(POW_CLOAK);
 					if ( Newdemo_state != ND_STATE_PLAYBACK )
 						multi_send_decloak(); // For demo recording
@@ -524,6 +527,7 @@ void do_invulnerable_stuff(void)
 				{
 					multi_send_play_sound(SOUND_INVULNERABILITY_OFF, F1_0);
 					maybe_drop_net_powerup(POW_INVULNERABILITY);
+					multi_send_ship_status();
 				}
 				#endif
 			}
@@ -1169,7 +1173,7 @@ void GameProcessFrame(void)
 
 
 		if (Auto_fire_fusion_cannon_time) {
-			if (Primary_weapon != FUSION_INDEX)
+			if (Players[Player_num].primary_weapon != FUSION_INDEX)
 				Auto_fire_fusion_cannon_time = 0;
 			else if (GameTime64 + FrameTime/2 >= Auto_fire_fusion_cannon_time) {
 				Auto_fire_fusion_cannon_time = 0;
@@ -1239,9 +1243,9 @@ void GameProcessFrame(void)
 void FireLaser()
 {
 
-	Global_laser_firing_count = Controls.fire_primary_state?Weapon_info[Primary_weapon_to_weapon_info[Primary_weapon]].fire_count:0;
+	Global_laser_firing_count = Controls.fire_primary_state?Weapon_info[Primary_weapon_to_weapon_info[Players[Player_num].primary_weapon]].fire_count:0;
 
-	if ((Primary_weapon == FUSION_INDEX) && (Global_laser_firing_count)) {
+	if ((Players[Player_num].primary_weapon == FUSION_INDEX) && (Global_laser_firing_count)) {
 		if ((Players[Player_num].energy < F1_0*2) && (Auto_fire_fusion_cannon_time == 0)) {
 			Global_laser_firing_count = 0;
 		} else {
@@ -1292,6 +1296,9 @@ void FireLaser()
 				}
 				Fusion_next_sound_time = GameTime64 + F1_0/8 + d_rand()/4;
 			}
+
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
 		}
 	}
 }

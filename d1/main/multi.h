@@ -85,11 +85,13 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_ROBOT_CLAIM          , 5)	\
 	VALUE(MULTI_END_SYNC             , 4)	\
 	VALUE(MULTI_CLOAK                , 2)	\
+	VALUE(MULTI_INVULN               , 2)	\
 	VALUE(MULTI_ENDLEVEL_START       , 3)	\
 	VALUE(MULTI_CREATE_EXPLOSION     , 2)	\
 	VALUE(MULTI_CONTROLCEN_FIRE      , 16)	\
 	VALUE(MULTI_CREATE_POWERUP       , 19)	\
 	VALUE(MULTI_DECLOAK              , 2)	\
+	VALUE(MULTI_DEINVULN             , 2)	\
 	VALUE(MULTI_MENU_CHOICE          , 2)	\
 	VALUE(MULTI_ROBOT_POSITION       , 5+sizeof(shortpos))	\
 	VALUE(MULTI_PLAYER_EXPLODE       , 57)	\
@@ -120,6 +122,7 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_OBS_UPDATE           , 4 + 8*MAX_OBSERVERS)	\
 	VALUE(MULTI_DAMAGE               , 15)  \
 	VALUE(MULTI_REPAIR               , 11)  \
+	VALUE(MULTI_SHIP_STATUS          , 29)  \
 	AFTER
 for_each_multiplayer_command(enum {, define_multiplayer_command, });
 
@@ -232,6 +235,7 @@ void multi_send_create_explosion(int player_num);
 void multi_send_controlcen_fire(vms_vector *to_target, int gun_num, int objnum);
 void multi_send_cloak(void);
 void multi_send_decloak(void);
+void multi_send_invuln(void);
 void multi_send_create_powerup(int powerup_type, int segnum, int objnum, vms_vector *pos);
 void multi_send_play_sound(int sound_num, fix volume);
 void multi_send_audio_taunt(int taunt_num);
@@ -242,6 +246,9 @@ void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_
 void multi_do_damage( const ubyte *buf );
 void multi_send_repair(fix repair, fix shields, ubyte sourcetype);
 void multi_do_repair( const ubyte *buf );
+void multi_send_ship_status();
+void multi_do_ship_status( const ubyte *buf );
+
 
 void multi_send_bounty( void );
 void multi_endlevel_score(void);
@@ -278,6 +285,7 @@ void multi_object_rw_to_object(object_rw *obj_rw, object *obj);
 int get_color_for_player(int id, int missile); 
 int get_color_for_team(int team, int missile);
 void multi_send_obs_update(ubyte event, ubyte event_data);
+void multi_send_ship_status_for_frame();
 
 // Exported variables
 
@@ -367,6 +375,11 @@ extern fix64 RefuseTimeLimit;
 extern struct netgame_info Netgame;
 
 extern int multi_received_objects; 
+
+
+extern ubyte Send_ship_status; // Whether we owe observers a ship status packet.
+extern fix64 Next_ship_status_time; // The next time we are allowed to send a ship status.
+
 
 /*
  * The Network Players structure

@@ -208,21 +208,23 @@ gameseq_init_network_players()
 #endif
 		}
 	}
+
 	NumNetPlayerPositions = k;
 
-	if((Game_mode & GM_MULTI_COOP) && (Game_mode & GM_OBSERVER)) {
-		Objects[OBSERVER_PLAYER_ID].type=OBJ_PLAYER;
-		Objects[OBSERVER_PLAYER_ID].pos = Objects[0].pos;
-		Objects[OBSERVER_PLAYER_ID].orient = Objects[0].orient;
-		Objects[OBSERVER_PLAYER_ID].segnum = Objects[0].segnum; 
+	// Ensure we have 8 starting locations, even if there aren't 8 in the file.  This makes observer mode work in all levels.
+	for (; k < MAX_PLAYERS; k++) {
+		i = obj_allocate();
 
-		Player_init[OBSERVER_PLAYER_ID].pos = Objects[i].pos;
-		Player_init[OBSERVER_PLAYER_ID].pos.z = Player_init[OBSERVER_PLAYER_ID].pos.z + F1_0;
-		Player_init[OBSERVER_PLAYER_ID].orient = Objects[i].orient;
-		Player_init[OBSERVER_PLAYER_ID].segnum = Objects[i].segnum;
-		Players[OBSERVER_PLAYER_ID].objnum = OBSERVER_PLAYER_ID;
-		Objects[OBSERVER_PLAYER_ID].id = OBSERVER_PLAYER_ID;
+		Objects[i].type=OBJ_PLAYER;
+
+		Player_init[k].pos = Objects[k % NumNetPlayerPositions].pos;
+		Player_init[k].orient = Objects[k % NumNetPlayerPositions].orient;
+		Player_init[k].segnum = Objects[k % NumNetPlayerPositions].segnum;
+		Players[k].objnum = i;
+		Objects[i].id = k;
 	}
+
+	NumNetPlayerPositions = MAX_PLAYERS;
 }
 
 void gameseq_remove_unused_players()
@@ -283,6 +285,8 @@ void init_player_stats_game(ubyte pnum)
 
 	init_player_stats_new_ship(pnum);
 
+	if (pnum == Player_num && Game_mode & GM_MULTI)
+		multi_send_ship_status();
 }
 
 void init_ammo_and_energy(void)
@@ -351,6 +355,9 @@ void init_player_stats_level(int secret_flag)
 	Next_flare_fire_time = Last_laser_fired_time = Next_laser_fire_time = Next_missile_fire_time = GameTime64;
 
 	init_gauges();
+
+	if (Game_mode & GM_MULTI)
+		multi_send_ship_status();
 }
 
 // Setup player for a brand-new ship
@@ -367,8 +374,8 @@ void init_player_stats_new_ship(ubyte pnum)
 			newdemo_record_player_weapon(1, 0);
 		}
 		Global_laser_firing_count=0;
-		Primary_weapon = 0;
-		Secondary_weapon = 0;
+		Players[Player_num].primary_weapon = 0;
+		Players[Player_num].secondary_weapon = 0;
 		dead_player_end(); //player no longer dead
 		Player_is_dead = 0;
 		Player_exploded = 0;
@@ -404,6 +411,9 @@ void init_player_stats_new_ship(ubyte pnum)
 	RespawningConcussions[pnum] = 0; 
 
 	digi_kill_sound_linked_to_object(Players[pnum].objnum);
+	
+	if (pnum == Player_num && Game_mode & GM_MULTI)
+		multi_send_ship_status();
 }
 
 #ifdef EDITOR
@@ -1000,6 +1010,8 @@ void DoPlayerDead()
 	}
 #endif
 
+	reset_auto_select();
+
 	if (Game_wind && cycle_window_vis)
 		window_set_visible(Game_wind, 0);
 
@@ -1258,7 +1270,9 @@ void InitPlayerPosition(int random)
 {
 	int NewPlayer=0;
 
-	if (! ((Game_mode & GM_MULTI) && !(Game_mode&GM_MULTI_COOP)) ) // If not deathmatch
+	if (Game_mode & GM_OBSERVER)
+		NewPlayer = 0;
+	else if (! ((Game_mode & GM_MULTI) && !(Game_mode&GM_MULTI_COOP)) ) // If not deathmatch
 		NewPlayer = Player_num;
 #ifdef NETWORK	
 	else if ((Game_mode & GM_MULTI) && (Netgame.SpawnStyle == SPAWN_STYLE_PREVIEW)  && Dead_player_camera != NULL)
