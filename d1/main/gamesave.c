@@ -1082,6 +1082,92 @@ const char *Level_being_loaded=NULL;
 extern void ncache_flush();
 #endif
 
+void randomize_objects() {
+	for (int i = 0; i < MAX_OBJECTS; i++) {
+		if (Objects[i].type == OBJ_POWERUP) {
+			if (Objects[i].id == POW_KEY_BLUE || Objects[i].id == POW_KEY_GOLD || Objects[i].id == POW_KEY_RED) {
+				// Don't shuffle keys... for now.
+				continue;
+			}
+
+			int rnd = d_rand() % 204;
+
+			if (rnd < 1) {
+				Objects[i].id = POW_EXTRA_LIFE;
+				Objects[i].rtype.pobj_info.model_num = 36;
+			} else if (rnd < 51) {
+				Objects[i].id = POW_ENERGY;
+				Objects[i].rtype.pobj_info.model_num = 18;
+			} else if (rnd < 101) {
+				Objects[i].id = POW_SHIELD_BOOST;
+				Objects[i].rtype.pobj_info.model_num = 19;
+			} else if (rnd < 111) {
+				Objects[i].id = POW_LASER;
+				Objects[i].rtype.pobj_info.model_num = 20;
+			} else if (rnd < 121) {
+				Objects[i].id = POW_MISSILE_1;
+				Objects[i].rtype.pobj_info.model_num = 34;
+			} else if (rnd < 126) {
+				Objects[i].id = POW_MISSILE_4;
+				Objects[i].rtype.pobj_info.model_num = 35;
+			} else if (rnd < 131) {
+				Objects[i].id = POW_QUAD_FIRE;
+				Objects[i].rtype.pobj_info.model_num = 51;
+			} else if (rnd < 141) {
+				Objects[i].id = POW_VULCAN_WEAPON;
+				Objects[i].rtype.pobj_info.model_num = 37;
+			} else if (rnd < 151) {
+				Objects[i].id = POW_SPREADFIRE_WEAPON;
+				Objects[i].rtype.pobj_info.model_num = 38;
+			} else if (rnd < 161) {
+				Objects[i].id = POW_PLASMA_WEAPON;
+				Objects[i].rtype.pobj_info.model_num = 39;
+			} else if (rnd < 171) {
+				Objects[i].id = POW_FUSION_WEAPON;
+				Objects[i].rtype.pobj_info.model_num = 40;
+			} else if (rnd < 176) {
+				Objects[i].id = POW_PROXIMITY_WEAPON;
+				Objects[i].rtype.pobj_info.model_num = 41;
+			} else if (rnd < 186) {
+				Objects[i].id = POW_HOMING_AMMO_1;
+				Objects[i].rtype.pobj_info.model_num = 42;
+			} else if (rnd < 191) {
+				Objects[i].id = POW_HOMING_AMMO_4;
+				Objects[i].rtype.pobj_info.model_num = 43;
+			} else if (rnd < 196) {
+				Objects[i].id = POW_SMARTBOMB_WEAPON;
+				Objects[i].rtype.pobj_info.model_num = 44;
+			} else if (rnd < 197) {
+				Objects[i].id = POW_MEGA_WEAPON;
+				Objects[i].rtype.pobj_info.model_num = 45;
+			} else if (rnd < 202) {
+				Objects[i].id = POW_VULCAN_AMMO;
+				Objects[i].rtype.pobj_info.model_num = 46;
+			} else if (rnd < 203) {
+				Objects[i].id = POW_CLOAK;
+				Objects[i].rtype.pobj_info.model_num = 47;
+			} else if (rnd < 204) {
+				Objects[i].id = POW_INVULNERABILITY;
+				Objects[i].rtype.pobj_info.model_num = 49;
+			}
+		}
+
+		if (Objects[i].type == OBJ_ROBOT) {
+			if (Objects[i].id == 17 || Objects[i].id == 23) {
+				// Don't shuffle bosses.
+				continue;
+			}
+
+			int rnd = d_rand() % 22;
+			if (rnd >= 17) rnd++;
+
+			Objects[i].id = rnd;
+
+			verify_object(&Objects[i]);
+		}
+	}
+}
+
 //loads a level (.LVL) file from disk
 //returns 0 if success, else error code
 int load_level(const char * filename_passed)
@@ -1187,6 +1273,8 @@ int load_level(const char * filename_passed)
 
 	PHYSFSX_fseek(LoadFile,gamedata_offset,SEEK_SET);
 	game_err = load_game_data(LoadFile);
+
+	randomize_objects();
 
 	if (game_err == -1) {   //error!!
 		PHYSFS_close(LoadFile);
