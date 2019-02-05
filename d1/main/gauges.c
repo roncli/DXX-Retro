@@ -2275,10 +2275,10 @@ void hud_show_kill_list()
 	if (Show_kill_list == 3)
 		players = 2;
 
-	if (players <= 4)
+	if (players <= 4 + (Netgame.host_is_obs ? 1 : 0))
 		n_left = players;
 	else
-		n_left = (players+1)/2;
+		n_left = (players + (Netgame.host_is_obs ? 0 : 1)) / 2;
 
     if(Netgame.BlackAndWhitePyros)
 		selected_player_rgb = player_rgb_alt;
@@ -2303,6 +2303,17 @@ void hud_show_kill_list()
 	int ox1 = x1;
 	for (i=0;i<players;i++) {
 		int player_num;
+
+		if (Show_kill_list == 3) {
+			player_num = i;
+		} else {
+			player_num = player_list[i];
+			if (Netgame.host_is_obs && player_num == 0) {
+				continue;
+			}
+		}
+
+
 		char name[9];
 		int sw,sh,aw;
 
@@ -2363,12 +2374,6 @@ void hud_show_kill_list()
 		}
 
 		cnxx = loss_downx + FSPACX(25);
-
-		if (Show_kill_list == 3)
-			player_num = i;
-		else
-			player_num = player_list[i];
-
 
 		int color;
 
@@ -2484,7 +2489,7 @@ void hud_show_kill_list()
 				gr_printf(loss_downx,y,"% 3d%%", loss_down);
 			}
 
-			if(connection_statuses[player_num].type == PROXY) {
+			if(connection_statuses[player_num].type == CONNT_PROXY) {
 				fontcolor_bad();
 
 				if(loss_up > 0 || loss_down > 0) {
@@ -2787,10 +2792,17 @@ int observer_show_player_cards() {
 		int color;
 		int x, y = 0;
 		int obs_player_card_height = 0;
+		int drawn_players = n_players - (Netgame.host_is_obs ? 1 : 0);
+		bool found_host_as_obs = FALSE;
 
 		// Show players in order of score.
 		for (int i = 0; i < n_players; i++) {
 			pnum = player_list[i];
+
+			if (Netgame.host_is_obs && pnum == 0) {
+				found_host_as_obs = TRUE;
+				continue;
+			}
 
 			if (Players[pnum].connected != CONNECT_PLAYING) {
 				color = BM_XRGB(12, 12, 12);
@@ -2799,7 +2811,7 @@ int observer_show_player_cards() {
 				color = BM_XRGB(selected_player_rgb[color_for_player].r, selected_player_rgb[color_for_player].g, selected_player_rgb[color_for_player].b);
 			}
 
-			int position = i;
+			int position = i - (found_host_as_obs ? 1 : 0);
 
 			if (grd_curcanv->cv_bitmap.bm_w < 2 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
 				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 2);
@@ -2808,25 +2820,25 @@ int observer_show_player_cards() {
 				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - OBS_PLAYER_CARD_WIDTH + (OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) * (position % 2);
 				y = 0 + obs_player_card_height * (position / 2);
 			} else if (grd_curcanv->cv_bitmap.bm_w < 6 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
-				if (n_players < 3) {
+				if (drawn_players < 3) {
 					position += 1;
 				}
 				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 2 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 4) + OBS_TIME_WIDTH * ((position % 4) / 2);
 				y = 0 + obs_player_card_height * (position / 4);
 			} else if (grd_curcanv->cv_bitmap.bm_w < 8 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
-				if (n_players < 3) {
+				if (drawn_players < 3) {
 					position += 2;
-				} else if (n_players < 5) {
+				} else if (drawn_players < 5) {
 					position += 1;
 				}
 				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 3 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 6) + OBS_TIME_WIDTH * ((position % 6) / 3);
 				y = 0 + obs_player_card_height * (position / 6);
 			} else {
-				if (n_players < 3) {
+				if (drawn_players < 3) {
 					position += 3;
-				} else if (n_players < 5) {
+				} else if (drawn_players < 5) {
 					position += 2;
-				} else if (n_players < 7) {
+				} else if (drawn_players < 7) {
 					position += 1;
 				}
 				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 4 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 8) + OBS_TIME_WIDTH * ((position % 8) / 4);
@@ -2868,6 +2880,10 @@ void observer_maybe_show_kill_graph() {
 
 		for (int i = 0; i < n_players; i++) {
 			pnum = player_list[i];
+
+			if (Netgame.host_is_obs && pnum == 0) {
+				continue;
+			}
 
 			if ((ev = First_event[pnum]) != NULL) {
 				while(ev != NULL) {
@@ -3121,6 +3137,10 @@ void observer_maybe_show_streaks() {
 	for (int i = 0; i < n_players; i++) {
 		pnum = player_list[i];
 
+		if (Netgame.host_is_obs && pnum == 0) {
+			continue;
+		}
+
 		// Determine last major event for player.
 		if (((is_anarchy || is_team_anarchy) && Kill_streak[pnum] >= 3) || (is_bounty && pnum == Bounty_target)) {
 			status.type = GST_KILL_STREAK;
@@ -3142,7 +3162,7 @@ void observer_maybe_show_streaks() {
 			add_player_status(pnum, status);
 			remove_player_status(pnum, GST_KILL_STREAK);
 			remove_player_status(pnum, GST_LAST_DEATH);
-		} else if (n_players > 2 && Last_death[pnum] != NULL && ((diff = GameTime64 - Last_death[pnum]->timestamp) >= i2f(60))) {
+		} else if (n_players > 2 + (Netgame.host_is_obs ? 1 : 0) && Last_death[pnum] != NULL && ((diff = GameTime64 - Last_death[pnum]->timestamp) >= i2f(60))) {
 			status.type = GST_LAST_DEATH;
 			if (diff >= i2f(3600)) {
 				sprintf(status.text, "Last Death: %i:%02i:%02i", (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
@@ -3159,7 +3179,7 @@ void observer_maybe_show_streaks() {
 		}
 
 		// Determine if there is a run.
-		if (is_anarchy && n_players == 2) {
+		if (is_anarchy && n_players == 2 + (Netgame.host_is_obs ? 1 : 0)) {
 			int initial_score = Players[pnum].net_kills_total;
 			int initial_opp_score = Players[player_list[1 - i]].net_kills_total;
 			if (initial_score >= 5) {
@@ -3255,6 +3275,11 @@ void observer_maybe_show_streaks() {
 		p_status = p_status->next;
 	}
 
+	int w;
+	int h;
+	int aw;
+	int x;
+
 	if (y > 0) {
 		y = grd_curcanv->cv_bitmap.bm_h - y - 5;
 
@@ -3268,7 +3293,10 @@ void observer_maybe_show_streaks() {
 			color = get_color_for_player(pnum, 0);
 			gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b), -1);
 
-			gr_printf(5, y, "%s", Players[pnum].callsign);
+			gr_get_string_size(Players[pnum].callsign, &w, &h, &aw);
+			x = grd_curcanv->cv_bitmap.bm_w - w - 5;
+
+			gr_printf(x, y, "%s", Players[pnum].callsign);
 			y += 27;
 
 			color = get_color_for_player(pnum, 1);
@@ -3277,7 +3305,10 @@ void observer_maybe_show_streaks() {
 			g_status = p_status->statuses;
 
 			while (g_status != NULL) {
-				gr_printf(5, y, "%s", g_status->text);
+				gr_get_string_size(g_status->text, &w, &h, &aw);
+				x = grd_curcanv->cv_bitmap.bm_w - w - 5;
+
+				gr_printf(x, y, "%s", g_status->text);
 				y += 27;
 
 				g_status = g_status->next;
@@ -3472,7 +3503,7 @@ void show_HUD_names()
 
 	for (pnum=0;pnum<N_players;pnum++)
 	{
-		if ((pnum == my_pnum && !is_observer()) || Players[pnum].connected != CONNECT_PLAYING)
+		if ((pnum == my_pnum && !is_observer()) || Players[pnum].connected != CONNECT_PLAYING || (Netgame.host_is_obs && pnum == 0))
 			continue;
 		// ridiculusly complex to check if we want to show something... but this is readable at least.
 		is_friend = (Game_mode & GM_MULTI_COOP || (Game_mode & GM_TEAM && get_team(pnum) == get_team(my_pnum)));

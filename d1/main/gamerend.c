@@ -113,7 +113,7 @@ void show_framerate()
 }
 
 void show_observers() {
-	if(Netgame.max_numobservers == 0) {
+	if(Netgame.max_numobservers == 0 && !Netgame.host_is_obs) {
 		return;
 	}
 
@@ -301,7 +301,7 @@ void show_netplayerinfo()
 	// process players table
 	for (i=0; i<MAX_PLAYERS; i++)
 	{
-		if (!Players[i].connected)
+		if (!Players[i].connected || i == 0 && Netgame.host_is_obs)
 			continue;
 
 		y+=LINE_SPACING;
